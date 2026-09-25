@@ -1,6 +1,5 @@
 --// ============================================================
---// MÓDULO AIM LOCK v1 — BLOCK 1
---// Setup, Save/Load e Estado
+--// AIM LOCK — Setup, Estado e Save/Load
 --// ============================================================
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -104,7 +103,7 @@ local function persist()
 	})
 end
 --// ============================================================
---// BLOCK 2 — FOV Circle Visual
+--// AIM LOCK — FOV Visual e Core
 --// ============================================================
 
 local visualGui = Instance.new("ScreenGui")
@@ -158,9 +157,6 @@ end
 
 updateFOV()
 Cam:GetPropertyChangedSignal("ViewportSize"):Connect(updateFOV)
---// ============================================================
---// BLOCK 3 — Aim Lock Core
---// ============================================================
 
 local Lock = {
 	target = nil, locked = false,
@@ -422,7 +418,7 @@ RunService:BindToRenderStep("BatataHub_AimLock", 201, function(dt)
 	end
 end)
 --// ============================================================
---// BLOCK 4 — Helpers de UI
+--// AIM LOCK — Helpers, Registro da Aba e Load Automático
 --// ============================================================
 
 local function makeToggle(container, ctx, labelText, getter, setter)
@@ -652,9 +648,6 @@ local function makeDropdown(container, ctx, labelText, options, getter, setter, 
 		end
 	end)
 end
---// ============================================================
---// BLOCK 5 — Registro da Aba AIM + Load Automático
---// ============================================================
 
 api:Invoke("Batata001", {
 	Name = "AIM",
@@ -711,7 +704,6 @@ api:Invoke("Batata001", {
 	end,
 })
 
---// Load automático com 1s entre cada ativação
 task.spawn(function()
 	task.wait(1.5)
 
@@ -742,4 +734,4 @@ task.spawn(function()
 	print("[Batata Hub - AIM] Configurações carregadas automaticamente.")
 end)
 
-print("[Módulo AIM LOCK v2] Registrado na Batata Hub.")
+print("[Módulo AIM LOCK] Registrado na Batata Hub.")
