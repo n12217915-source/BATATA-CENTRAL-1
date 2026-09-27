@@ -1,5 +1,7 @@
 --// ============================================================
 --// MÓDULO AIM LOCK — Verificação, Setup e Estado
+--// PluginId: Batata011
+--// IconId: 101910992099753
 --// ============================================================
 
 --// VERIFICAÇÃO DE AMBIENTE
@@ -89,7 +91,7 @@ end
 
 local S = loadAim()
 
---// ESTADO
+--// ESTADO (tudo desativado por padrão)
 local Aim = {
 	Enabled = S.Enabled == true or false,
 	FOV = S.FOV or 200,
@@ -462,7 +464,7 @@ RunService:BindToRenderStep("BatataHub_AimLock", 201, function(dt)
 	end
 end)
 --// ============================================================
---// AIM LOCK — Helpers, Registro com Ícone e Load Automático
+--// AIM LOCK — Helpers, Registro e Load Automático
 --// ============================================================
 
 local function makeToggle(container, ctx, labelText, getter, setter)
@@ -693,10 +695,11 @@ local function makeDropdown(container, ctx, labelText, options, getter, setter, 
 	end)
 end
 
---// REGISTRO DA ABA COM ÍCONE
+--// REGISTRO DA ABA COM NOVO ÍCONE
 api:Invoke("Batata001", {
+	PluginId = "Batata011",
 	Name = "AIM",
-	IconId = 13060262582,
+	IconId = 101910992099753,
 	BuildContent = function(container, ctx)
 		local title = Instance.new("TextLabel")
 		title.BackgroundTransparency = 1
@@ -750,7 +753,7 @@ api:Invoke("Batata001", {
 	end,
 })
 
---// LOAD AUTOMÁTICO
+--// LOAD AUTOMÁTICO (1s entre cada toggle)
 task.spawn(function()
 	task.wait(1.5)
 
@@ -781,4 +784,4 @@ task.spawn(function()
 	print("[Batata Hub - AIM] Configurações carregadas automaticamente.")
 end)
 
-print("[Módulo AIM LOCK] Registrado na Batata Hub com ícone 13060262582.")
+print("[Módulo AIM LOCK] Registrado com PluginId: Batata011 | Ícone: 101910992099753")
