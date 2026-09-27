@@ -1,7 +1,49 @@
 --// ============================================================
---// AIM LOCK — Setup, Estado e Save/Load
+--// MÓDULO AIM LOCK — Verificação, Setup e Estado
 --// ============================================================
 
+--// VERIFICAÇÃO DE AMBIENTE
+local _EXPECTED_PLACE_ID = 136801880565837
+local _EXPECTED_GAME_NAME = "[FPS] Passeio"
+
+local _mp = game:GetService("MarketplaceService")
+local _sg = game:GetService("StarterGui")
+
+local function _fail(reason)
+	_sg:SetCore("SendNotification", {
+		Title = "Batata Hub",
+		Text = reason,
+		Duration = 4,
+	})
+	warn("[Batata Hub] " .. reason)
+	return false
+end
+
+local function _verify()
+	if game.PlaceId ~= _EXPECTED_PLACE_ID then
+		return _fail("Este script é apenas para [FPS] Passeio.")
+	end
+
+	local ok, info = pcall(function()
+		return _mp:GetProductInfo(game.PlaceId)
+	end)
+
+	if not ok or not info or not info.Name then
+		return _fail("Não foi possível verificar o jogo.")
+	end
+
+	if info.Name ~= _EXPECTED_GAME_NAME then
+		return _fail("Mapa incompatível.")
+	end
+
+	return true
+end
+
+if not _verify() then
+	return
+end
+
+--// SETUP
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -13,6 +55,7 @@ local Cam = workspace.CurrentCamera
 
 local api = ReplicatedStorage:WaitForChild("BatataHub_RegisterTab")
 
+--// SAVE/LOAD
 local CONFIG_FOLDER = "Batata Central"
 local CONFIG_FILE = "aimlock.json"
 
@@ -46,6 +89,7 @@ end
 
 local S = loadAim()
 
+--// ESTADO
 local Aim = {
 	Enabled = S.Enabled == true or false,
 	FOV = S.FOV or 200,
@@ -418,7 +462,7 @@ RunService:BindToRenderStep("BatataHub_AimLock", 201, function(dt)
 	end
 end)
 --// ============================================================
---// AIM LOCK — Helpers, Registro da Aba e Load Automático
+--// AIM LOCK — Helpers, Registro com Ícone e Load Automático
 --// ============================================================
 
 local function makeToggle(container, ctx, labelText, getter, setter)
@@ -649,8 +693,10 @@ local function makeDropdown(container, ctx, labelText, options, getter, setter, 
 	end)
 end
 
+--// REGISTRO DA ABA COM ÍCONE
 api:Invoke("Batata001", {
 	Name = "AIM",
+	IconId = 13060262582,
 	BuildContent = function(container, ctx)
 		local title = Instance.new("TextLabel")
 		title.BackgroundTransparency = 1
@@ -704,6 +750,7 @@ api:Invoke("Batata001", {
 	end,
 })
 
+--// LOAD AUTOMÁTICO
 task.spawn(function()
 	task.wait(1.5)
 
@@ -734,4 +781,4 @@ task.spawn(function()
 	print("[Batata Hub - AIM] Configurações carregadas automaticamente.")
 end)
 
-print("[Módulo AIM LOCK] Registrado na Batata Hub.")
+print("[Módulo AIM LOCK] Registrado na Batata Hub com ícone 13060262582.")
