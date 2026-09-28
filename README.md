@@ -1,5 +1,5 @@
 --// ============================================================
---// MÓDULO AIM LOCK v2 — Verificação e Setup
+--// MÓDULO AIM LOCK v2
 --// PluginId: Batata011
 --// IconId: 101910992099753
 --// ============================================================
@@ -56,10 +56,8 @@ local player = Players.LocalPlayer
 local Cam = workspace.CurrentCamera
 
 local api = ReplicatedStorage:WaitForChild("BatataHub_RegisterTab")
---// ============================================================
---// AIM LOCK — Estado e Save/Load
---// ============================================================
 
+--// SAVE/LOAD
 local CONFIG_FOLDER = "Batata Central"
 local CONFIG_FILE = "aimlock.json"
 
@@ -151,7 +149,7 @@ local function persist()
 	})
 end
 --// ============================================================
---// AIM LOCK — FOV Visual e Core
+--// AIM LOCK — FOV Visual
 --// ============================================================
 
 local visualGui = Instance.new("ScreenGui")
@@ -206,6 +204,10 @@ end
 updateFOV()
 Cam:GetPropertyChangedSignal("ViewportSize"):Connect(updateFOV)
 
+--// ============================================================
+--// AIM LOCK — Core (parte 1): Amigos e Visibilidade
+--// ============================================================
+
 local Lock = {
 	target = nil, locked = false,
 	lastMousePos = UserInputService:GetMouseLocation(),
@@ -256,6 +258,9 @@ local function isVisible(p)
 	if not result then return true end
 	return result.Instance:IsDescendantOf(char)
 end
+--// ============================================================
+--// AIM LOCK — Core (parte 2): Mira e Predição
+--// ============================================================
 
 local function getTarget()
 	local best = nil
@@ -368,6 +373,9 @@ local function shouldSkipAim()
 	end
 	return true
 end
+--// ============================================================
+--// AIM LOCK — Core (parte 3): Inputs e Loop de Render
+--// ============================================================
 
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp then return end
@@ -466,7 +474,7 @@ RunService:BindToRenderStep("BatataHub_AimLock", 201, function(dt)
 	end
 end)
 --// ============================================================
---// AIM LOCK — Interface e Registro
+--// AIM LOCK — Interface, Registro e Load Automático
 --// ============================================================
 
 local function buildAimContent(container, ctx)
@@ -499,7 +507,7 @@ local function buildAimContent(container, ctx)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = scroll
 
-	-- Helpers
+	-- Helper: Toggle
 	local function makeToggle(labelText, getter, setter)
 		local row = Instance.new("Frame")
 		row.Size = UDim2.new(1, -8, 0, 26)
@@ -546,6 +554,7 @@ local function buildAimContent(container, ctx)
 		end)
 	end
 
+	-- Helper: Slider
 	local function makeSlider(labelText, min, max, getter, setter, onUpdate)
 		local wrap = Instance.new("Frame")
 		wrap.Size = UDim2.new(1, -8, 0, 36)
@@ -636,6 +645,7 @@ local function buildAimContent(container, ctx)
 		end)
 	end
 
+	-- Helper: Dropdown
 	local function makeDropdown(labelText, options, getter, setter, onUpdate)
 		local wrap = Instance.new("Frame")
 		wrap.Size = UDim2.new(1, -8, 0, 40)
@@ -760,10 +770,8 @@ api:Invoke("Batata001", {
 	IconId = 101910992099753,
 	BuildContent = buildAimContent,
 })
---// ============================================================
---// AIM LOCK — Load Automático
---// ============================================================
 
+--// LOAD AUTOMÁTICO (1s entre cada toggle)
 task.spawn(function()
 	task.wait(1.5)
 
