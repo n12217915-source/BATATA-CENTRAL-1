@@ -1,5 +1,5 @@
 --// ============================================================
---// MÓDULO AIM LOCK — Verificação, Setup e Estado
+--// MÓDULO AIM LOCK v2 — Verificação e Setup
 --// PluginId: Batata011
 --// IconId: 101910992099753
 --// ============================================================
@@ -56,8 +56,10 @@ local player = Players.LocalPlayer
 local Cam = workspace.CurrentCamera
 
 local api = ReplicatedStorage:WaitForChild("BatataHub_RegisterTab")
+--// ============================================================
+--// AIM LOCK — Estado e Save/Load
+--// ============================================================
 
---// SAVE/LOAD
 local CONFIG_FOLDER = "Batata Central"
 local CONFIG_FILE = "aimlock.json"
 
@@ -464,293 +466,360 @@ RunService:BindToRenderStep("BatataHub_AimLock", 201, function(dt)
 	end
 end)
 --// ============================================================
---// AIM LOCK — Helpers, Registro e Load Automático
+--// AIM LOCK — Getters e Setters Globais
 --// ============================================================
 
-local function makeToggle(container, ctx, labelText, getter, setter)
-	local row = Instance.new("Frame")
-	row.Size = UDim2.new(1, -8, 0, 26)
-	row.BackgroundColor3 = ctx.colors.CARD
-	row.BorderSizePixel = 0
-	row.Parent = container
-	Instance.new("UICorner", row).CornerRadius = UDim.new(0, 5)
+_G.Aim = _G.Aim or {}
 
-	local label = Instance.new("TextLabel")
-	label.BackgroundTransparency = 1
-	label.Position = UDim2.fromOffset(8, 0)
-	label.Size = UDim2.new(1, -50, 1, 0)
-	label.Font = Enum.Font.Gotham
-	label.Text = labelText
-	label.TextSize = 10
-	label.TextColor3 = ctx.colors.TEXT
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.Parent = row
+_G.Aim.Enabled_getter = function() return Aim.Enabled end
+_G.Aim.Enabled_setter = function(v) Aim.Enabled = v; persist() end
 
-	local btn = Instance.new("TextButton")
-	btn.AnchorPoint = Vector2.new(1, 0.5)
-	btn.Position = UDim2.new(1, -6, 0.5, 0)
-	btn.Size = UDim2.fromOffset(34, 18)
-	btn.BackgroundColor3 = getter() and ctx.colors.ACCENT or ctx.colors.PANEL
-	btn.Text = ""
-	btn.AutoButtonColor = false
-	btn.Parent = row
-	Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
+_G.Aim.ToggleMode_getter = function() return Aim.ToggleMode end
+_G.Aim.ToggleMode_setter = function(v) Aim.ToggleMode = v; persist() end
 
-	local knob = Instance.new("Frame")
-	knob.Size = UDim2.fromOffset(14, 14)
-	knob.Position = getter() and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
-	knob.BackgroundColor3 = getter() and ctx.colors.BLACK or ctx.colors.SUBTEXT
-	knob.BorderSizePixel = 0
-	knob.Parent = btn
-	Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+_G.Aim.AutoLock_getter = function() return Aim.AutoLock end
+_G.Aim.AutoLock_setter = function(v) Aim.AutoLock = v; persist() end
 
-	btn.MouseButton1Click:Connect(function()
-		local state = not getter()
-		setter(state)
-		btn.BackgroundColor3 = state and ctx.colors.ACCENT or ctx.colors.PANEL
-		knob.BackgroundColor3 = state and ctx.colors.BLACK or ctx.colors.SUBTEXT
-		knob.Position = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
-	end)
-end
+_G.Aim.Walls_getter = function() return Aim.Walls end
+_G.Aim.Walls_setter = function(v) Aim.Walls = v; persist() end
 
-local function makeSlider(container, ctx, labelText, min, max, getter, setter, onUpdate)
-	local wrap = Instance.new("Frame")
-	wrap.Size = UDim2.new(1, -8, 0, 36)
-	wrap.BackgroundColor3 = ctx.colors.CARD
-	wrap.BorderSizePixel = 0
-	wrap.Parent = container
-	Instance.new("UICorner", wrap).CornerRadius = UDim.new(0, 5)
+_G.Aim.AutoReleaseOnWall_getter = function() return Aim.AutoReleaseOnWall end
+_G.Aim.AutoReleaseOnWall_setter = function(v) Aim.AutoReleaseOnWall = v; persist() end
 
-	local label = Instance.new("TextLabel")
-	label.BackgroundTransparency = 1
-	label.Position = UDim2.fromOffset(8, 3)
-	label.Size = UDim2.new(0.7, -10, 0, 12)
-	label.Font = Enum.Font.Gotham
-	label.Text = labelText
-	label.TextSize = 10
-	label.TextColor3 = ctx.colors.TEXT
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.Parent = wrap
+_G.Aim.TeamCheck_getter = function() return Aim.TeamCheck end
+_G.Aim.TeamCheck_setter = function(v) Aim.TeamCheck = v; persist() end
 
-	local valueLabel = Instance.new("TextLabel")
-	valueLabel.BackgroundTransparency = 1
-	valueLabel.AnchorPoint = Vector2.new(1, 0)
-	valueLabel.Position = UDim2.new(1, -8, 0, 3)
-	valueLabel.Size = UDim2.new(0.3, 0, 0, 12)
-	valueLabel.Font = Enum.Font.GothamBold
-	valueLabel.Text = tostring(getter())
-	valueLabel.TextSize = 10
-	valueLabel.TextColor3 = ctx.colors.ACCENT
-	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-	valueLabel.Parent = wrap
+_G.Aim.IgnoreFriends_getter = function() return Aim.IgnoreFriends end
+_G.Aim.IgnoreFriends_setter = function(v) Aim.IgnoreFriends = v; persist() end
 
-	local track = Instance.new("Frame")
-	track.Position = UDim2.fromOffset(8, 22)
-	track.Size = UDim2.new(1, -16, 0, 5)
-	track.BackgroundColor3 = ctx.colors.PANEL
-	track.BorderSizePixel = 0
-	track.Parent = wrap
-	Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
+_G.Aim.DisguiseMode_getter = function() return Aim.DisguiseMode end
+_G.Aim.DisguiseMode_setter = function(v) Aim.DisguiseMode = v; persist() end
 
-	local fraction = (getter() - min) / (max - min)
-	local fill = Instance.new("Frame")
-	fill.Size = UDim2.new(fraction, 0, 1, 0)
-	fill.BackgroundColor3 = ctx.colors.ACCENT
-	fill.BorderSizePixel = 0
-	fill.Parent = track
-	Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+_G.Aim.PredictEnabled_getter = function() return Aim.PredictEnabled end
+_G.Aim.PredictEnabled_setter = function(v) Aim.PredictEnabled = v; persist() end
 
-	local knob = Instance.new("Frame")
-	knob.AnchorPoint = Vector2.new(0.5, 0.5)
-	knob.Position = UDim2.new(fraction, 0, 0.5, 0)
-	knob.Size = UDim2.fromOffset(11, 11)
-	knob.BackgroundColor3 = ctx.colors.TEXT
-	knob.BorderSizePixel = 0
-	knob.Parent = track
-	Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+_G.Aim.FOVVisible_getter = function() return Aim.FOVVisible end
+_G.Aim.FOVVisible_setter = function(v) Aim.FOVVisible = v; persist(); updateFOV() end
 
-	local dragging = false
-	local function setFromX(x)
-		local rel = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
-		fill.Size = UDim2.new(rel, 0, 1, 0)
-		knob.Position = UDim2.new(rel, 0, 0.5, 0)
-		local v = math.floor(min + rel * (max - min) + 0.5)
-		valueLabel.Text = tostring(v)
-		setter(v)
-		if onUpdate then onUpdate() end
-	end
+_G.Aim.FOVFilled_getter = function() return Aim.FOVFilled end
+_G.Aim.FOVFilled_setter = function(v) Aim.FOVFilled = v; persist(); updateFOV() end
 
-	track.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = true
-			setFromX(input.Position.X)
-		end
-	end)
-	knob.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = true
-		end
-	end)
-	UserInputService.InputChanged:Connect(function(input)
-		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-			setFromX(input.Position.X)
-		end
-	end)
-	UserInputService.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = false
-		end
-	end)
-end
+_G.Aim.FOVPulse_getter = function() return Aim.FOVPulse end
+_G.Aim.FOVPulse_setter = function(v) Aim.FOVPulse = v; persist() end
 
-local function makeDropdown(container, ctx, labelText, options, getter, setter, onUpdate)
-	local wrap = Instance.new("Frame")
-	wrap.Size = UDim2.new(1, -8, 0, 40)
-	wrap.BackgroundColor3 = ctx.colors.CARD
-	wrap.BorderSizePixel = 0
-	wrap.Parent = container
-	Instance.new("UICorner", wrap).CornerRadius = UDim.new(0, 5)
+_G.Aim.FOV_getter = function() return Aim.FOV end
+_G.Aim.FOV_setter = function(v) Aim.FOV = v; persist() end
+_G.Aim.FOV_update = updateFOV
 
-	local label = Instance.new("TextLabel")
-	label.BackgroundTransparency = 1
-	label.Position = UDim2.fromOffset(8, 3)
-	label.Size = UDim2.new(1, -16, 0, 12)
-	label.Font = Enum.Font.Gotham
-	label.Text = labelText
-	label.TextSize = 10
-	label.TextColor3 = ctx.colors.TEXT
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.Parent = wrap
+_G.Aim.SmoothLocked_getter = function() return Aim.SmoothLocked end
+_G.Aim.SmoothLocked_setter = function(v) Aim.SmoothLocked = v; persist() end
 
-	local btn = Instance.new("TextButton")
-	btn.Position = UDim2.fromOffset(8, 18)
-	btn.Size = UDim2.new(1, -16, 0, 16)
-	btn.BackgroundColor3 = ctx.colors.PANEL
-	btn.Text = "  " .. getter() .. "  ▼"
-	btn.Font = Enum.Font.Gotham
-	btn.TextSize = 10
-	btn.TextColor3 = ctx.colors.TEXT
-	btn.TextXAlignment = Enum.TextXAlignment.Left
-	btn.AutoButtonColor = false
-	btn.Parent = wrap
-	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+_G.Aim.MaxAngularSpeed_getter = function() return Aim.MaxAngularSpeed end
+_G.Aim.MaxAngularSpeed_setter = function(v) Aim.MaxAngularSpeed = v; persist() end
 
-	local expanded = false
-	local optionFrame
+_G.Aim.Jitter_getter = function() return math.floor(Aim.JitterAmount * 100) end
+_G.Aim.Jitter_setter = function(v) Aim.JitterAmount = v / 100; persist() end
 
-	btn.MouseButton1Click:Connect(function()
-		expanded = not expanded
-		if expanded then
-			optionFrame = Instance.new("Frame")
-			optionFrame.Size = UDim2.new(1, 0, 0, #options * 18 + 6)
-			optionFrame.Position = UDim2.new(0, 0, 1, 2)
-			optionFrame.BackgroundColor3 = ctx.colors.PANEL
-			optionFrame.BorderSizePixel = 0
-			optionFrame.ZIndex = 20
-			optionFrame.Parent = wrap
-			Instance.new("UICorner", optionFrame).CornerRadius = UDim.new(0, 4)
+_G.Aim.Predict_getter = function() return math.floor(Aim.PredictStrength * 100) end
+_G.Aim.Predict_setter = function(v) Aim.PredictStrength = v / 100; persist() end
 
-			local optLayout = Instance.new("UIListLayout")
-			optLayout.Padding = UDim.new(0, 1)
-			optLayout.Parent = optionFrame
+_G.Aim.Part_getter = function() return Aim.Part end
+_G.Aim.Part_setter = function(v) Aim.Part = v; persist() end
 
-			local pad = Instance.new("UIPadding")
-			pad.PaddingLeft = UDim.new(0, 3)
-			pad.PaddingTop = UDim.new(0, 3)
-			pad.PaddingRight = UDim.new(0, 3)
-			pad.PaddingBottom = UDim.new(0, 3)
-			pad.Parent = optionFrame
+_G.Aim.LockKey_getter = function() return Aim.LockKey end
+_G.Aim.LockKey_setter = function(v) Aim.LockKey = v; persist() end
 
-			for _, opt in ipairs(options) do
-				local ob = Instance.new("TextButton")
-				ob.Size = UDim2.new(1, 0, 0, 16)
-				ob.BackgroundTransparency = 1
-				ob.Text = "  " .. opt
-				ob.Font = Enum.Font.Gotham
-				ob.TextSize = 9
-				ob.TextColor3 = ctx.colors.TEXT
-				ob.TextXAlignment = Enum.TextXAlignment.Left
-				ob.AutoButtonColor = false
-				ob.ZIndex = 21
-				ob.Parent = optionFrame
+_G.Aim.FOVColor_getter = function() return Aim.FOVColor end
+_G.Aim.FOVColor_setter = function(v) Aim.FOVColor = v; persist(); updateFOV() end
+--// ============================================================
+--// AIM LOCK — Registro como Plugin + Load Automático
+--// ============================================================
 
-				ob.MouseEnter:Connect(function()
-					ob.BackgroundTransparency = 0
-					ob.BackgroundColor3 = ctx.colors.CARD
-				end)
-				ob.MouseLeave:Connect(function()
-					ob.BackgroundTransparency = 1
-				end)
-				ob.MouseButton1Click:Connect(function()
-					setter(opt)
-					btn.Text = "  " .. opt .. "  ▼"
-					expanded = false
-					if optionFrame then optionFrame:Destroy() end
-					if onUpdate then onUpdate() end
-				end)
-			end
-		else
-			if optionFrame then optionFrame:Destroy() end
-		end
-	end)
-end
-
---// REGISTRO DA ABA COM NOVO ÍCONE
 api:Invoke("Batata001", {
 	PluginId = "Batata011",
 	Name = "AIM",
 	IconId = 101910992099753,
-	BuildContent = function(container, ctx)
-		local title = Instance.new("TextLabel")
-		title.BackgroundTransparency = 1
-		title.Position = UDim2.fromOffset(9, 6)
-		title.Size = UDim2.new(1, -18, 0, 16)
-		title.Font = Enum.Font.GothamBlack
-		title.Text = "AIM LOCK"
-		title.TextSize = 13
-		title.TextColor3 = ctx.colors.TEXT
-		title.TextXAlignment = Enum.TextXAlignment.Left
-		title.Parent = container
+	BuildContent = [==[
+		local function makeToggle(container, ctx, labelText, getter, setter)
+			local row = Instance.new("Frame")
+			row.Size = UDim2.new(1, -8, 0, 26)
+			row.BackgroundColor3 = ctx.colors.CARD
+			row.BorderSizePixel = 0
+			row.Parent = container
+			Instance.new("UICorner", row).CornerRadius = UDim.new(0, 5)
 
-		local scroll = Instance.new("ScrollingFrame")
-		scroll.Size = UDim2.new(1, -14, 1, -28)
-		scroll.Position = UDim2.fromOffset(7, 24)
-		scroll.BackgroundTransparency = 1
-		scroll.BorderSizePixel = 0
-		scroll.ScrollBarThickness = 3
-		scroll.ScrollBarImageColor3 = ctx.colors.ACCENT
-		scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-		scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-		scroll.Parent = container
+			local label = Instance.new("TextLabel")
+			label.BackgroundTransparency = 1
+			label.Position = UDim2.fromOffset(8, 0)
+			label.Size = UDim2.new(1, -50, 1, 0)
+			label.Font = Enum.Font.Gotham
+			label.Text = labelText
+			label.TextSize = 10
+			label.TextColor3 = ctx.colors.TEXT
+			label.TextXAlignment = Enum.TextXAlignment.Left
+			label.Parent = row
 
-		local layout = Instance.new("UIListLayout")
-		layout.Padding = UDim.new(0, 4)
-		layout.SortOrder = Enum.SortOrder.LayoutOrder
-		layout.Parent = scroll
+			local btn = Instance.new("TextButton")
+			btn.AnchorPoint = Vector2.new(1, 0.5)
+			btn.Position = UDim2.new(1, -6, 0.5, 0)
+			btn.Size = UDim2.fromOffset(34, 18)
+			btn.BackgroundColor3 = getter() and ctx.colors.ACCENT or ctx.colors.PANEL
+			btn.Text = ""
+			btn.AutoButtonColor = false
+			btn.Parent = row
+			Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
 
-		makeToggle(scroll, ctx, "Ativar Aim Lock", function() return Aim.Enabled end, function(v) Aim.Enabled = v; persist() end)
-		makeToggle(scroll, ctx, "Modo Hold (segurar)", function() return Aim.ToggleMode end, function(v) Aim.ToggleMode = v; persist() end)
-		makeToggle(scroll, ctx, "Auto Lock", function() return Aim.AutoLock end, function(v) Aim.AutoLock = v; persist() end)
-		makeToggle(scroll, ctx, "Ignorar Paredes", function() return Aim.Walls end, function(v) Aim.Walls = v; persist() end)
-		makeToggle(scroll, ctx, "Soltar atrás de parede", function() return Aim.AutoReleaseOnWall end, function(v) Aim.AutoReleaseOnWall = v; persist() end)
-		makeToggle(scroll, ctx, "Team Check", function() return Aim.TeamCheck end, function(v) Aim.TeamCheck = v; persist() end)
-		makeToggle(scroll, ctx, "Ignorar Amigos", function() return Aim.IgnoreFriends end, function(v) Aim.IgnoreFriends = v; persist() end)
-		makeToggle(scroll, ctx, "Modo Disfarçado", function() return Aim.DisguiseMode end, function(v) Aim.DisguiseMode = v; persist() end)
-		makeToggle(scroll, ctx, "Ativar Predição", function() return Aim.PredictEnabled end, function(v) Aim.PredictEnabled = v; persist() end)
-		makeToggle(scroll, ctx, "Mostrar Círculo FOV", function() return Aim.FOVVisible end, function(v) Aim.FOVVisible = v; persist(); updateFOV() end)
-		makeToggle(scroll, ctx, "Preencher FOV", function() return Aim.FOVFilled end, function(v) Aim.FOVFilled = v; persist(); updateFOV() end)
-		makeToggle(scroll, ctx, "Pulsar quando Lockado", function() return Aim.FOVPulse end, function(v) Aim.FOVPulse = v; persist() end)
+			local knob = Instance.new("Frame")
+			knob.Size = UDim2.fromOffset(14, 14)
+			knob.Position = getter() and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
+			knob.BackgroundColor3 = getter() and ctx.colors.BLACK or ctx.colors.SUBTEXT
+			knob.BorderSizePixel = 0
+			knob.Parent = btn
+			Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
 
-		makeSlider(scroll, ctx, "FOV", 50, 800, function() return Aim.FOV end, function(v) Aim.FOV = v; persist() end, updateFOV)
-		makeSlider(scroll, ctx, "Suavidade no Lock", 1, 20, function() return Aim.SmoothLocked end, function(v) Aim.SmoothLocked = v; persist() end)
-		makeSlider(scroll, ctx, "Velocidade Angular", 5, 90, function() return Aim.MaxAngularSpeed end, function(v) Aim.MaxAngularSpeed = v; persist() end)
-		makeSlider(scroll, ctx, "Ruído da Mira", 0, 100, function() return math.floor(Aim.JitterAmount * 100) end, function(v) Aim.JitterAmount = v / 100; persist() end)
-		makeSlider(scroll, ctx, "Força da Predição", 1, 30, function() return math.floor(Aim.PredictStrength * 100) end, function(v) Aim.PredictStrength = v / 100; persist() end)
+			btn.MouseButton1Click:Connect(function()
+				local state = not getter()
+				setter(state)
+				btn.BackgroundColor3 = state and ctx.colors.ACCENT or ctx.colors.PANEL
+				knob.BackgroundColor3 = state and ctx.colors.BLACK or ctx.colors.SUBTEXT
+				knob.Position = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
+			end)
+		end
 
-		makeDropdown(scroll, ctx, "Parte do Corpo", {"Head", "HumanoidRootPart", "UpperTorso", "LowerTorso"}, function() return Aim.Part end, function(v) Aim.Part = v; persist() end)
-		makeDropdown(scroll, ctx, "Tecla de Lock", {"E", "Q", "F", "G", "R", "T", "V", "C", "X", "Z"}, function() return Aim.LockKey end, function(v) Aim.LockKey = v; persist() end)
-		makeDropdown(scroll, ctx, "Cor do FOV", {"Branco", "Vermelho", "Verde", "Azul", "Amarelo", "Roxo", "Rosa", "Ciano"}, function() return Aim.FOVColor end, function(v) Aim.FOVColor = v; persist(); updateFOV() end)
-	end,
+		local function makeSlider(container, ctx, labelText, min, max, getter, setter, onUpdate)
+			local wrap = Instance.new("Frame")
+			wrap.Size = UDim2.new(1, -8, 0, 36)
+			wrap.BackgroundColor3 = ctx.colors.CARD
+			wrap.BorderSizePixel = 0
+			wrap.Parent = container
+			Instance.new("UICorner", wrap).CornerRadius = UDim.new(0, 5)
+
+			local label = Instance.new("TextLabel")
+			label.BackgroundTransparency = 1
+			label.Position = UDim2.fromOffset(8, 3)
+			label.Size = UDim2.new(0.7, -10, 0, 12)
+			label.Font = Enum.Font.Gotham
+			label.Text = labelText
+			label.TextSize = 10
+			label.TextColor3 = ctx.colors.TEXT
+			label.TextXAlignment = Enum.TextXAlignment.Left
+			label.Parent = wrap
+
+			local valueLabel = Instance.new("TextLabel")
+			valueLabel.BackgroundTransparency = 1
+			valueLabel.AnchorPoint = Vector2.new(1, 0)
+			valueLabel.Position = UDim2.new(1, -8, 0, 3)
+			valueLabel.Size = UDim2.new(0.3, 0, 0, 12)
+			valueLabel.Font = Enum.Font.GothamBold
+			valueLabel.Text = tostring(getter())
+			valueLabel.TextSize = 10
+			valueLabel.TextColor3 = ctx.colors.ACCENT
+			valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+			valueLabel.Parent = wrap
+
+			local track = Instance.new("Frame")
+			track.Position = UDim2.fromOffset(8, 22)
+			track.Size = UDim2.new(1, -16, 0, 5)
+			track.BackgroundColor3 = ctx.colors.PANEL
+			track.BorderSizePixel = 0
+			track.Parent = wrap
+			Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
+
+			local fraction = (getter() - min) / (max - min)
+			local fill = Instance.new("Frame")
+			fill.Size = UDim2.new(fraction, 0, 1, 0)
+			fill.BackgroundColor3 = ctx.colors.ACCENT
+			fill.BorderSizePixel = 0
+			fill.Parent = track
+			Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+
+			local knob = Instance.new("Frame")
+			knob.AnchorPoint = Vector2.new(0.5, 0.5)
+			knob.Position = UDim2.new(fraction, 0, 0.5, 0)
+			knob.Size = UDim2.fromOffset(11, 11)
+			knob.BackgroundColor3 = ctx.colors.TEXT
+			knob.BorderSizePixel = 0
+			knob.Parent = track
+			Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+			local dragging = false
+			local function setFromX(x)
+				local rel = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+				fill.Size = UDim2.new(rel, 0, 1, 0)
+				knob.Position = UDim2.new(rel, 0, 0.5, 0)
+				local v = math.floor(min + rel * (max - min) + 0.5)
+				valueLabel.Text = tostring(v)
+				setter(v)
+				if onUpdate then onUpdate() end
+			end
+
+			track.InputBegan:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					dragging = true
+					setFromX(input.Position.X)
+				end
+			end)
+			knob.InputBegan:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					dragging = true
+				end
+			end)
+			game:GetService("UserInputService").InputChanged:Connect(function(input)
+				if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+					setFromX(input.Position.X)
+				end
+			end)
+			game:GetService("UserInputService").InputEnded:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					dragging = false
+				end
+			end)
+		end
+
+		local function makeDropdown(container, ctx, labelText, options, getter, setter, onUpdate)
+			local wrap = Instance.new("Frame")
+			wrap.Size = UDim2.new(1, -8, 0, 40)
+			wrap.BackgroundColor3 = ctx.colors.CARD
+			wrap.BorderSizePixel = 0
+			wrap.Parent = container
+			Instance.new("UICorner", wrap).CornerRadius = UDim.new(0, 5)
+
+			local label = Instance.new("TextLabel")
+			label.BackgroundTransparency = 1
+			label.Position = UDim2.fromOffset(8, 3)
+			label.Size = UDim2.new(1, -16, 0, 12)
+			label.Font = Enum.Font.Gotham
+			label.Text = labelText
+			label.TextSize = 10
+			label.TextColor3 = ctx.colors.TEXT
+			label.TextXAlignment = Enum.TextXAlignment.Left
+			label.Parent = wrap
+
+			local btn = Instance.new("TextButton")
+			btn.Position = UDim2.fromOffset(8, 18)
+			btn.Size = UDim2.new(1, -16, 0, 16)
+			btn.BackgroundColor3 = ctx.colors.PANEL
+			btn.Text = "  " .. getter() .. "  ▼"
+			btn.Font = Enum.Font.Gotham
+			btn.TextSize = 10
+			btn.TextColor3 = ctx.colors.TEXT
+			btn.TextXAlignment = Enum.TextXAlignment.Left
+			btn.AutoButtonColor = false
+			btn.Parent = wrap
+			Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+
+			local expanded = false
+			local optionFrame
+
+			btn.MouseButton1Click:Connect(function()
+				expanded = not expanded
+				if expanded then
+					optionFrame = Instance.new("Frame")
+					optionFrame.Size = UDim2.new(1, 0, 0, #options * 18 + 6)
+					optionFrame.Position = UDim2.new(0, 0, 1, 2)
+					optionFrame.BackgroundColor3 = ctx.colors.PANEL
+					optionFrame.BorderSizePixel = 0
+					optionFrame.ZIndex = 20
+					optionFrame.Parent = wrap
+					Instance.new("UICorner", optionFrame).CornerRadius = UDim.new(0, 4)
+
+					local optLayout = Instance.new("UIListLayout")
+					optLayout.Padding = UDim.new(0, 1)
+					optLayout.Parent = optionFrame
+
+					local pad = Instance.new("UIPadding")
+					pad.PaddingLeft = UDim.new(0, 3)
+					pad.PaddingTop = UDim.new(0, 3)
+					pad.PaddingRight = UDim.new(0, 3)
+					pad.PaddingBottom = UDim.new(0, 3)
+					pad.Parent = optionFrame
+
+					for _, opt in ipairs(options) do
+						local ob = Instance.new("TextButton")
+						ob.Size = UDim2.new(1, 0, 0, 16)
+						ob.BackgroundTransparency = 1
+						ob.Text = "  " .. opt
+						ob.Font = Enum.Font.Gotham
+						ob.TextSize = 9
+						ob.TextColor3 = ctx.colors.TEXT
+						ob.TextXAlignment = Enum.TextXAlignment.Left
+						ob.AutoButtonColor = false
+						ob.ZIndex = 21
+						ob.Parent = optionFrame
+
+						ob.MouseEnter:Connect(function()
+							ob.BackgroundTransparency = 0
+							ob.BackgroundColor3 = ctx.colors.CARD
+						end)
+						ob.MouseLeave:Connect(function()
+							ob.BackgroundTransparency = 1
+						end)
+						ob.MouseButton1Click:Connect(function()
+							setter(opt)
+							btn.Text = "  " .. opt .. "  ▼"
+							expanded = false
+							if optionFrame then optionFrame:Destroy() end
+							if onUpdate then onUpdate() end
+						end)
+					end
+				else
+					if optionFrame then optionFrame:Destroy() end
+				end
+			end)
+		end
+
+		return function(container, ctx)
+			local title = Instance.new("TextLabel")
+			title.BackgroundTransparency = 1
+			title.Position = UDim2.fromOffset(9, 6)
+			title.Size = UDim2.new(1, -18, 0, 16)
+			title.Font = Enum.Font.GothamBlack
+			title.Text = "AIM LOCK"
+			title.TextSize = 13
+			title.TextColor3 = ctx.colors.TEXT
+			title.TextXAlignment = Enum.TextXAlignment.Left
+			title.Parent = container
+
+			local scroll = Instance.new("ScrollingFrame")
+			scroll.Size = UDim2.new(1, -14, 1, -28)
+			scroll.Position = UDim2.fromOffset(7, 24)
+			scroll.BackgroundTransparency = 1
+			scroll.BorderSizePixel = 0
+			scroll.ScrollBarThickness = 3
+			scroll.ScrollBarImageColor3 = ctx.colors.ACCENT
+			scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+			scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+			scroll.Parent = container
+
+			local layout = Instance.new("UIListLayout")
+			layout.Padding = UDim.new(0, 4)
+			layout.SortOrder = Enum.SortOrder.LayoutOrder
+			layout.Parent = scroll
+
+			makeToggle(scroll, ctx, "Ativar Aim Lock", _G.Aim.Enabled_getter, _G.Aim.Enabled_setter)
+			makeToggle(scroll, ctx, "Modo Hold (segurar)", _G.Aim.ToggleMode_getter, _G.Aim.ToggleMode_setter)
+			makeToggle(scroll, ctx, "Auto Lock", _G.Aim.AutoLock_getter, _G.Aim.AutoLock_setter)
+			makeToggle(scroll, ctx, "Ignorar Paredes", _G.Aim.Walls_getter, _G.Aim.Walls_setter)
+			makeToggle(scroll, ctx, "Soltar atrás de parede", _G.Aim.AutoReleaseOnWall_getter, _G.Aim.AutoReleaseOnWall_setter)
+			makeToggle(scroll, ctx, "Team Check", _G.Aim.TeamCheck_getter, _G.Aim.TeamCheck_setter)
+			makeToggle(scroll, ctx, "Ignorar Amigos", _G.Aim.IgnoreFriends_getter, _G.Aim.IgnoreFriends_setter)
+			makeToggle(scroll, ctx, "Modo Disfarçado", _G.Aim.DisguiseMode_getter, _G.Aim.DisguiseMode_setter)
+			makeToggle(scroll, ctx, "Ativar Predição", _G.Aim.PredictEnabled_getter, _G.Aim.PredictEnabled_setter)
+			makeToggle(scroll, ctx, "Mostrar Círculo FOV", _G.Aim.FOVVisible_getter, _G.Aim.FOVVisible_setter)
+			makeToggle(scroll, ctx, "Preencher FOV", _G.Aim.FOVFilled_getter, _G.Aim.FOVFilled_setter)
+			makeToggle(scroll, ctx, "Pulsar quando Lockado", _G.Aim.FOVPulse_getter, _G.Aim.FOVPulse_setter)
+
+			makeSlider(scroll, ctx, "FOV", 50, 800, _G.Aim.FOV_getter, _G.Aim.FOV_setter, _G.Aim.FOV_update)
+			makeSlider(scroll, ctx, "Suavidade no Lock", 1, 20, _G.Aim.SmoothLocked_getter, _G.Aim.SmoothLocked_setter)
+			makeSlider(scroll, ctx, "Velocidade Angular", 5, 90, _G.Aim.MaxAngularSpeed_getter, _G.Aim.MaxAngularSpeed_setter)
+			makeSlider(scroll, ctx, "Ruído da Mira", 0, 100, _G.Aim.Jitter_getter, _G.Aim.Jitter_setter)
+			makeSlider(scroll, ctx, "Força da Predição", 1, 30, _G.Aim.Predict_getter, _G.Aim.Predict_setter)
+
+			makeDropdown(scroll, ctx, "Parte do Corpo", {"Head", "HumanoidRootPart", "UpperTorso", "LowerTorso"}, _G.Aim.Part_getter, _G.Aim.Part_setter)
+			makeDropdown(scroll, ctx, "Tecla de Lock", {"E", "Q", "F", "G", "R", "T", "V", "C", "X", "Z"}, _G.Aim.LockKey_getter, _G.Aim.LockKey_setter)
+			makeDropdown(scroll, ctx, "Cor do FOV", {"Branco", "Vermelho", "Verde", "Azul", "Amarelo", "Roxo", "Rosa", "Ciano"}, _G.Aim.FOVColor_getter, _G.Aim.FOVColor_setter, _G.Aim.FOV_update)
+		end
+	]==],
 })
 
 --// LOAD AUTOMÁTICO (1s entre cada toggle)
@@ -784,4 +853,4 @@ task.spawn(function()
 	print("[Batata Hub - AIM] Configurações carregadas automaticamente.")
 end)
 
-print("[Módulo AIM LOCK] Registrado com PluginId: Batata011 | Ícone: 101910992099753")
+print("[Módulo AIM LOCK v2] Registrado com PluginId: Batata011 | Ícone: 101910992099753")
